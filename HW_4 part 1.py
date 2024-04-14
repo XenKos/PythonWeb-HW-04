@@ -2,6 +2,7 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 import socket
 import json 
+import logging
 
 class MyHTTPHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -44,10 +45,28 @@ def save_data(data):
         json.dump(data, file)
         file.write('\n')
 
+def run_socket_server(host, port):
+    BUFFER_SIZE = 1024
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    server_socket.bind((host, port))
+    logging.info("Starting socket server")
+    try:
+        while True:
+            msg, address = server_socket.recvfrom(BUFFER_SIZE)
+            data = json.loads(msg.decode())
+            save_data(data)
+    except KeyboardInterrupt:
+        server_socket.close()
+        logging.info("Socket server stopped")
+
 def main():
+    logging.basicConfig(level=logging.INFO)
+    # Запуск UDP-сервера
+    run_socket_server('localhost', 5000)
+    # Запуск HTTP-сервера
     server_address = ('', 3000)
     httpd = HTTPServer(server_address, MyHTTPHandler)
-    print('Starting server...')
+    logging.info('Starting HTTP server...')
     httpd.serve_forever()
 
 if __name__ == '__main__':
